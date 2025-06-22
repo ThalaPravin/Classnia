@@ -11,12 +11,12 @@ import {
 import { Link, useRouter } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "../../config/firebaseConfig"; 
+import { app , auth, db } from "../../config/firebaseConfig"; 
 import { doc, getDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from "react-native-toast-message"; 
 
-import { auth, db } from "../../config/firebaseConfig";
+
 
 
 const SignIn = () => {
@@ -165,7 +165,7 @@ const handleSignIn = async () => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.signup}>
-            Don't have an account?{" "}
+            Do not have an account?
             <Link href="/auth/signup">
               <Text style={styles.link}>Sign up</Text>
             </Link>

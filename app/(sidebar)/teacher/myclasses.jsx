@@ -82,11 +82,11 @@ export default function MyClasses() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const handleViewDetails = (classId: string) => {
+  const handleViewDetails = (classId) => {
     router.push(`/(sidebar)/(teacher)/classdetails/${classId}`);
   };
 
-  const ClassCard = ({ classData }: { classData: any }) => (
+  const ClassCard = ({ classData }) => (
     <View style={styles.classCard}>
       <View style={styles.cardHeader}>
         <View style={styles.subjectBadge}>

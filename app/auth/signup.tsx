@@ -12,9 +12,9 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { app } from "../../config/firebaseConfig"; 
+import { app , auth, db } from "../../config/firebaseConfig"; 
 
-import { auth, db } from "../../config/firebaseConfig";
+
 
 
 const SignUp = () => {

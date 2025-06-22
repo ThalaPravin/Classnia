@@ -287,7 +287,7 @@ const SplashScreen = () => {
               ]}
             />
           </View>
-          <Text style={styles.loadingText}>Preparing your experience...</Text>
+          <Text style={styles.loadingText}>Designed By Sagar...</Text>
         </View>
       </View>
     </View>

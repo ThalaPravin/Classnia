@@ -16,12 +16,12 @@ import {
   addDoc,
   updateDoc,
   serverTimestamp,
+  doc,
 } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import useUserInfo from "@/hooks/useUserInfo";
 import { uploadToCloudinary } from "../../../hooks/uploadToCloudinary";
-import { doc } from "firebase/firestore";
 
 // interface FormData {
 //   className: string;
@@ -102,65 +102,64 @@ export default function CreateClassScreen() {
     }
   };
 
- const handleSubmit = async () => {
-  if (!auth.currentUser) {
-    Alert.alert("Error", "You must be logged in to create a class");
-    return;
-  }
-
-  if (!formData.className || !formData.subject || !formData.monthlyFee) {
-    Alert.alert("Error", "Please fill all required fields");
-    return;
-  }
-
-  if (isNaN(parseFloat(formData.monthlyFee))) {
-    Alert.alert("Error", "Monthly fee must be a valid number");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    // Generate class code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    // Prepare class data
-    const classData = {
-      classCode: code,
-      className: formData.className,
-      subject: formData.subject,
-      monthlyFee: parseFloat(formData.monthlyFee),
-      createdAt: serverTimestamp(),
-      teacherId: auth.currentUser.uid,
-      qrCodeUrl: "",
-      classId: "", // Initialize classId
-    };
-
-    // Add class to Firestore
-    const classRef = await addDoc(collection(db, "classes"), classData);
-    const classId = classRef.id;
-
-    
-    let updateData = { classId };
-    if (formData.qrImage) {
-      console.log("Uploading QR Image URI:", formData.qrImage.uri);
-      const qrCodeUrl = await uploadToCloudinary(formData.qrImage.uri);
-      updateData.qrCodeUrl = qrCodeUrl;
-      console.log("QR Code uploaded to Cloudinary:", qrCodeUrl);
+  const handleSubmit = async () => {
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to create a class");
+      return;
     }
 
-    // Perform single update
-    await updateDoc(doc(db, "classes", classId), updateData);
+    if (!formData.className || !formData.subject || !formData.monthlyFee) {
+      Alert.alert("Error", "Please fill all required fields");
+      return;
+    }
 
-    setGeneratedCode(code);
-    Alert.alert("Success", "Class created successfully!");
-  } catch (error) {
-    console.error("Error creating class:", error);
-    Alert.alert("Error", "Failed to create class or upload QR code.");
-  } finally {
-    setLoading(false);
-  }
-};
+    if (isNaN(parseFloat(formData.monthlyFee))) {
+      Alert.alert("Error", "Monthly fee must be a valid number");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Generate class code
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // Prepare class data
+      const classData = {
+        classCode: code,
+        className: formData.className,
+        subject: formData.subject,
+        monthlyFee: parseFloat(formData.monthlyFee),
+        createdAt: serverTimestamp(),
+        teacherId: auth.currentUser.uid,
+        qrCodeUrl: "",
+        classId: "", // Initialize classId
+      };
+
+      // Add class to Firestore
+      const classRef = await addDoc(collection(db, "classes"), classData);
+      const classId = classRef.id;
+
+      let updateData = { classId };
+      if (formData.qrImage) {
+        console.log("Uploading QR Image URI:", formData.qrImage.uri);
+        const qrCodeUrl = await uploadToCloudinary(formData.qrImage.uri);
+        updateData.qrCodeUrl = qrCodeUrl;
+        console.log("QR Code uploaded to Cloudinary:", qrCodeUrl);
+      }
+
+      // Perform single update
+      await updateDoc(doc(db, "classes", classId), updateData);
+
+      setGeneratedCode(code);
+      Alert.alert("Success", "Class created successfully!");
+    } catch (error) {
+      console.error("Error creating class:", error);
+      Alert.alert("Error", "Failed to create class or upload QR code.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCopyCode = async () => {
     if (generatedCode) {

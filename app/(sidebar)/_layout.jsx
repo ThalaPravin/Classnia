@@ -5,8 +5,8 @@ import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useState, useEffect } from "react";
-import { auth, db } from "../../config/firebaseConfig";
+import { useState } from "react";
+import { auth } from "../../config/firebaseConfig";
 import { signOut } from "firebase/auth";
 import useUserInfo from "../../hooks/useUserInfo";
 
@@ -39,12 +39,12 @@ const teacherSidebarItems = [
     icon: "add-circle-outline",
     iconFamily: "ionicons",
   },
-  {
-    name: "Students",
-    route: "teacher/students",
-    icon: "people-outline",
-    iconFamily: "ionicons",
-  },
+  // {
+  //   name: "Students",
+  //   route: "teacher/students",
+  //   icon: "people-outline",
+  //   iconFamily: "ionicons",
+  // },
   {
     name: "Approvals",
     route: "teacher/approval",
@@ -72,12 +72,12 @@ const studentSidebarItems= [
     icon: "grid-outline",
     iconFamily: "ionicons",
   },
-  {
-    name: "My Classes",
-    route: "student/studentclasses",
-    icon: "book-outline",
-    iconFamily: "ionicons",
-  },
+  // {
+  //   name: "My Classes",
+  //   route: "student/studentclasses",
+  //   icon: "book-outline",
+  //   iconFamily: "ionicons",
+  // },
   {
     name: "Join Class",
     route: "student/joinclass",
@@ -219,7 +219,7 @@ function CustomDrawerContent(props) {
 
 export default function Layout() {
   
-  const [userType, setUserType] = useState("tuition");
+  // const [userType, setUserType] = useState("tuition");
 
 
 
@@ -267,13 +267,13 @@ export default function Layout() {
             title: "Create New Class",
           }}
         />
-        <Drawer.Screen
+        {/* <Drawer.Screen
           name="teacher/students"
           options={{
             drawerLabel: "Students",
             title: "All Students",
           }}
-        />
+        /> */}
         <Drawer.Screen
           name="teacher/approval"
           options={{
@@ -304,13 +304,13 @@ export default function Layout() {
             title: "Student Dashboard",
           }}
         />
-        <Drawer.Screen
+        {/* <Drawer.Screen
           name="student/studentclasses"
           options={{
             drawerLabel: "My Classes",
             title: "My Classes",
           }}
-        />
+        /> */}
         <Drawer.Screen
           name="student/joinclass"
           options={{

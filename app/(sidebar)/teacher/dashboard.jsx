@@ -34,17 +34,17 @@ export default function TeacherDashboard() {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
         duration: 700,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, []);
@@ -62,7 +62,7 @@ export default function TeacherDashboard() {
           toValue: 1,
           tension: 50,
           friction: 7,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start();
       }, delay);
     }, []);
@@ -104,7 +104,7 @@ export default function TeacherDashboard() {
           toValue: 1,
           tension: 50,
           friction: 7,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start();
       }, delay);
     }, []);
@@ -112,14 +112,14 @@ export default function TeacherDashboard() {
     const handlePressIn = () => {
       Animated.spring(pressAnim, {
         toValue: 0.95,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     };
 
     const handlePressOut = () => {
       Animated.spring(pressAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     };
 

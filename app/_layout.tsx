@@ -59,8 +59,8 @@ export default function RootLayout() {
         {/* Splash Screen - First screen to show */}
         <Stack.Screen name="splash" options={{ headerShown: false }} />
 
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="signup" options={{ headerShown: false }} />
+        {/* <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ headerShown: false }} /> */}
 
         {/* Main App with Sidebar Layout */}
         <Stack.Screen

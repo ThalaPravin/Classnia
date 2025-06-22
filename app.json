@@ -9,15 +9,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need access to your camera to upload QR codes.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to upload QR codes."
+      }
     },
     "android": {
+      "package": "com.anonymous.clasnia",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.clasnia"
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +45,18 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e95099cb-83ad-46b5-a475-2bdaa7a4eb2e"
+      }
+    },
+    "owner": "thalapravin"
   }
 }
