@@ -34,7 +34,7 @@ const SignUp = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save additional data in Firestore
+      
       await setDoc(doc(db, "users", user.uid), {
         fullName,
         email,

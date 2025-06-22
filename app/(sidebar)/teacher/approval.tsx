@@ -1,57 +1,107 @@
-// TeacherApprovalsPage.js - Expo React Native Component
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  Modal, 
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Modal,
   Alert,
-  StyleSheet 
+  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { db, auth } from '../../../config/firebaseConfig'; // Adjust path to your Firebase config
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 export default function TeacherApprovalsPage() {
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [joinRequests, setJoinRequests] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - this would come from Firebase
-  const [pendingRequests, setPendingRequests] = useState([
-    {
-      id: '1',
-      studentName: 'Pravin Avhad',
-      className: 'Mathematics Grade 10',
-      phone: '+91 9876543210',
-      rollNumber: 'MT001',
-      gender: 'Male',
-      screenshotUrl: 'https://via.placeholder.com/300x400/4467EE/white?text=Payment+Screenshot',
-      requestDate: '2024-01-15',
-      status: 'pending'
-    },
-    {
-      id: '2',
-      studentName: 'Ritesh Deshmukh',
-      className: 'Physics Grade 12',
-      phone: '+91 9876543211',
-      rollNumber: 'PH002',
-      gender: 'Female',
-      screenshotUrl: 'https://via.placeholder.com/300x400/4467EE/white?text=Payment+Screenshot+2',
-      requestDate: '2024-01-16',
-      status: 'pending'
-    },
-    {
-      id: '3',
-      studentName: 'Virat Kohli',
-      className: 'Chemistry Grade 11',
-      phone: '+91 9876543212',
-      rollNumber: 'CH003',
-      gender: 'Male',
-      screenshotUrl: 'https://via.placeholder.com/300x400/4467EE/white?text=Payment+Screenshot+3',
-      requestDate: '2024-01-17',
-      status: 'pending'
+  // Fetch classes where teacherId matches current user's UID
+  useEffect(() => {
+    const fetchClasses = async () => {
+      if (!auth.currentUser) {
+        Alert.alert('Error', 'Please log in to view your classes.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, 'classes'),
+          where('teacherId', '==', auth.currentUser.uid)
+        );
+        const classesSnapshot = await getDocs(q);
+        const classesData = classesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          className: doc.data().className,
+          classCode: doc.data().classCode,
+          subject: doc.data().subject,
+          monthlyFee: doc.data().monthlyFee,
+          teacherId: doc.data().teacherId,
+          qrCodeUrl: doc.data().qrCodeUrl,
+        }));
+        setClasses(classesData);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        Alert.alert('Error', `Failed to load classes: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
+  // Fetch join requests for a selected class
+  const fetchJoinRequests = async (classId) => {
+    setLoading(true);
+    try {
+      const q = query(
+        collection(db, 'join_requests'),
+        where('classId', '==', doc(db, 'classes', classId))
+      );
+      const requestsSnapshot = await getDocs(q);
+      const requestsData = await Promise.all(
+        requestsSnapshot.docs.map(async (requestDoc) => {
+          const data = requestDoc.data();
+          // Fetch student name from users collection if needed
+          let studentName = data.studentName || 'Unknown';
+          if (data.studentId) {
+            const studentRef = data.studentId;
+            const studentDoc = await getDoc(studentRef);
+            if (studentDoc.exists()) {
+              studentName = studentDoc.data().name || studentName;
+            }
+          }
+          return {
+            id: requestDoc.id,
+            studentName,
+            className: classes.find((cls) => cls.id === classId)?.className || 'Unknown',
+            phone: data.phone,
+            rollNumber: data.rollNumber,
+            gender: data.gender,
+            screenshotUrl: data.screenshotUrl,
+            transactionId: data.transactionId,
+            requestDate: data.requestedAt?.toDate().toISOString() || new Date().toISOString(),
+            status: data.status,
+          };
+        })
+      );
+      setJoinRequests(requestsData);
+      setSelectedClass(classes.find((cls) => cls.id === classId));
+    } catch (error) {
+      console.error('Error fetching join requests:', error);
+      Alert.alert('Error', `Failed to load join requests: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const handleViewScreenshot = (imageUrl) => {
     setSelectedImage(imageUrl);
@@ -67,13 +117,22 @@ export default function TeacherApprovalsPage() {
         {
           text: 'Approve',
           style: 'default',
-          onPress: () => {
-            setPendingRequests(prev => 
-              prev.filter(request => request.id !== requestId)
-            );
-            Alert.alert('Success', `${studentName} has been approved successfully!`);
-          }
-        }
+          onPress: async () => {
+            try {
+              const requestRef = doc(db, 'join_requests', requestId);
+              await updateDoc(requestRef, { status: 'approved' });
+              setJoinRequests((prev) =>
+                prev.map((req) =>
+                  req.id === requestId ? { ...req, status: 'approved' } : req
+                )
+              );
+              Alert.alert('Success', `${studentName} has been approved successfully!`);
+            } catch (error) {
+              console.error('Error approving request:', error);
+              Alert.alert('Error', `Failed to approve request: ${error.message}`);
+            }
+          },
+        },
       ]
     );
   };
@@ -87,107 +146,172 @@ export default function TeacherApprovalsPage() {
         {
           text: 'Reject',
           style: 'destructive',
-          onPress: () => {
-            setPendingRequests(prev => 
-              prev.filter(request => request.id !== requestId)
-            );
-            Alert.alert('Rejected', `${studentName}'s request has been rejected.`);
-          }
-        }
+          onPress: async () => {
+            try {
+              const requestRef = doc(db, 'join_requests', requestId);
+              await updateDoc(requestRef, { status: 'rejected' });
+              setJoinRequests((prev) =>
+                prev.filter((req) => req.id !== requestId)
+              );
+              Alert.alert('Rejected', `${studentName}'s request has been rejected.`);
+            } catch (error) {
+              console.error('Error rejecting request:', error);
+              Alert.alert('Error', `Failed to reject request: ${error.message}`);
+            }
+          },
+        },
       ]
     );
+  };
+
+  const handleClassSelect = (classId) => {
+    fetchJoinRequests(classId);
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Join Requests</Text>
+        <Text style={styles.headerTitle}>
+          {selectedClass ? `Join Requests` : 'My Classes'}
+        </Text>
         <Text style={styles.headerSubtitle}>
-          {pendingRequests.length} pending approval{pendingRequests.length !== 1 ? 's' : ''}
+          {selectedClass
+            ? `${joinRequests.length} pending approval${joinRequests.length !== 1 ? 's' : ''}`
+            : `${classes.length} class${classes.length !== 1 ? 'es' : ''}`}
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {pendingRequests.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color="#4467EE" />
+            <Text style={styles.emptySubtitle}>Loading...</Text>
+          </View>
+        ) : !selectedClass ? (
+          classes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="school-outline" size={80} color="#4467EE" />
+              <Text style={styles.emptyTitle}>No Classes Found</Text>
+              <Text style={styles.emptySubtitle}>
+                You have not created any classes yet.
+              </Text>
+            </View>
+          ) : (
+            classes.map((cls) => (
+              <TouchableOpacity
+                key={cls.id}
+                style={styles.classCard}
+                onPress={() => handleClassSelect(cls.id)}
+              >
+                <View style={styles.cardHeader}>
+                  <View>
+                    <Text style={styles.studentName}>{cls.className}</Text>
+                    <Text style={styles.className}>Code: {cls.classCode}</Text>
+                  </View>
+                  <View style={styles.feeContainer}>
+                    <Text style={styles.feeText}>₹{cls.monthlyFee}</Text>
+                    <Text style={styles.feeLabel}>per month</Text>
+                  </View>
+                </View>
+                <View style={styles.cardBody}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Subject:</Text>
+                    <Text style={styles.detailValue}>{cls.subject}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )
+        ) : joinRequests.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="checkmark-circle-outline" size={80} color="#4467EE" />
-            <Text style={styles.emptyTitle}>All Caught Up!</Text>
+            <Text style={styles.emptyTitle}>No Pending Requests</Text>
             <Text style={styles.emptySubtitle}>
-              No pending join requests at the moment
+              No join requests for {selectedClass.className}.
             </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedClass(null)}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color="#4467EE" />
+              <Text style={styles.backButtonText}>Back to Classes</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          pendingRequests.map((request) => (
-            <View key={request.id} style={styles.requestCard}>
-              {/* Student Info Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName}>{request.studentName}</Text>
-                  <Text style={styles.className}>{request.className}</Text>
+          <>
+            <TouchableOpacity
+              onPress={() => setSelectedClass(null)}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color="#4467EE" />
+              <Text style={styles.backButtonText}>Back to Classes</Text>
+            </TouchableOpacity>
+            {joinRequests.map((request) => (
+              <View key={request.id} style={styles.requestCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.studentInfo}>
+                    <Text style={styles.studentName}>{request.studentName}</Text>
+                    <Text style={styles.className}>{request.className}</Text>
+                  </View>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>{request.status.toUpperCase()}</Text>
+                  </View>
                 </View>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>PENDING</Text>
+                <View style={styles.detailsContainer}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Phone:</Text>
+                    <Text style={styles.detailValue}>{request.phone}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Roll Number:</Text>
+                    <Text style={styles.detailValue}>{request.rollNumber}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Gender:</Text>
+                    <Text style={styles.detailValue}>{request.gender}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Transaction ID:</Text>
+                    <Text style={styles.detailValue}>{request.transactionId}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Request Date:</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(request.requestDate).toLocaleDateString()}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-
-              {/* Student Details */}
-              <View style={styles.detailsContainer}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Phone:</Text>
-                  <Text style={styles.detailValue}>{request.phone}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Roll Number:</Text>
-                  <Text style={styles.detailValue}>{request.rollNumber}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Gender:</Text>
-                  <Text style={styles.detailValue}>{request.gender}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Request Date:</Text>
-                  <Text style={styles.detailValue}>
-                    {new Date(request.requestDate).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionsContainer}>
-                {/* View Screenshot Button */}
-                <TouchableOpacity
-                  onPress={() => handleViewScreenshot(request.screenshotUrl)}
-                  style={styles.screenshotButton}
-                >
-                  <Ionicons name="image-outline" size={20} color="white" />
-                  <Text style={styles.screenshotButtonText}>View Screenshot</Text>
-                </TouchableOpacity>
-
-                {/* Approve/Reject Buttons */}
-                <View style={styles.actionButtonsRow}>
+                <View style={styles.actionsContainer}>
                   <TouchableOpacity
-                    onPress={() => handleReject(request.id, request.studentName)}
-                    style={[styles.actionButton, styles.rejectButton]}
+                    onPress={() => handleViewScreenshot(request.screenshotUrl)}
+                    style={styles.screenshotButton}
                   >
-                    <Ionicons name="close-circle-outline" size={20} color="white" />
-                    <Text style={styles.actionButtonText}>Reject</Text>
+                    <Ionicons name="image-outline" size={20} color="white" />
+                    <Text style={styles.screenshotButtonText}>View Screenshot</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => handleApprove(request.id, request.studentName)}
-                    style={[styles.actionButton, styles.approveButton]}
-                  >
-                    <Ionicons name="checkmark-circle-outline" size={20} color="white" />
-                    <Text style={styles.actionButtonText}>Approve</Text>
-                  </TouchableOpacity>
+                  {request.status === 'pending' && (
+                    <View style={styles.actionButtonsRow}>
+                      <TouchableOpacity
+                        onPress={() => handleReject(request.id, request.studentName)}
+                        style={[styles.actionButton, styles.rejectButton]}
+                      >
+                        <Ionicons name="close-circle-outline" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Reject</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleApprove(request.id, request.studentName)}
+                        style={[styles.actionButton, styles.approveButton]}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Approve</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
-            </View>
-          ))
+            ))}
+          </>
         )}
       </ScrollView>
 
@@ -209,7 +333,6 @@ export default function TeacherApprovalsPage() {
                 <Ionicons name="close" size={20} color="white" />
               </TouchableOpacity>
             </View>
-            
             {selectedImage && (
               <Image
                 source={{ uri: selectedImage }}
@@ -267,6 +390,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
+  },
+  classCard: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4467EE',
   },
   requestCard: {
     backgroundColor: '#2a2a2a',
@@ -401,5 +532,31 @@ const styles = StyleSheet.create({
     height: 400,
     borderRadius: 8,
     resizeMode: 'contain',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButtonText: {
+    color: '#4467EE',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  feeContainer: {
+    alignItems: 'flex-end',
+  },
+  feeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4467EE',
+  },
+  feeLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  cardBody: {
+    marginBottom: 15,
   },
 });

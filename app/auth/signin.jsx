@@ -12,6 +12,9 @@ import { Link, useRouter } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "../../config/firebaseConfig"; 
+import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message"; 
 
 import { auth, db } from "../../config/firebaseConfig";
 
@@ -24,22 +27,53 @@ const SignIn = () => {
 
   const router = useRouter();
 
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert("Please enter both email and password.");
-      return;
-    }
+  
 
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", "Logged in successfully.");
-     
-      router.replace("/(sidebar)/teacher/dashboard");
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert("Login Failed", error.message);
+const handleSignIn = async () => {
+  if (!email || !password) {
+    Alert.alert("Please enter both email and password.");
+    return;
+  }
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    const user = userCredential.user;
+
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnapshot = await getDoc(userDocRef);
+
+    if (userSnapshot.exists()) {
+      const userData = userSnapshot.data();
+
+      // ✅ Save full user data to AsyncStorage
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+
+      // ✅ Show toast
+      Toast.show({
+        type: "success",
+        text1: `${userData.role === "student" ? "Student" : "Teacher"} logged in`,
+      });
+
+      // ✅ Navigate based on role
+      if (userData.role === "student") {
+        router.replace("/(sidebar)/student/dashboard");
+      } else {
+        router.replace("/(sidebar)/teacher/dashboard");
+      }
+    } else {
+      Alert.alert("Error", "User data not found in Firestore.");
     }
-  };
+  } catch (error ) {
+    console.error(error);
+    Alert.alert("Login Failed", error.message);
+  }
+};
+
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -336,4 +370,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignIn;
+export default SignIn;   

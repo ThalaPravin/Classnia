@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import "react-native-reanimated";
+import Toast from "react-native-toast-message";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 
@@ -17,7 +18,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [appIsReady, setAppIsReady] = useState(false);
-   
+
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -27,7 +28,7 @@ export default function RootLayout() {
       try {
         // Pre-load fonts, make any API calls you need to do here
         // Artificially delay for demo purposes to show the splash screen
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (e) {
         console.warn(e);
       } finally {
@@ -57,23 +58,22 @@ export default function RootLayout() {
       <Stack>
         {/* Splash Screen - First screen to show */}
         <Stack.Screen name="splash" options={{ headerShown: false }} />
-        
-        
+
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
-        
+
         {/* Main App with Sidebar Layout */}
-        <Stack.Screen 
-          name="(sidebar)" 
-          options={{ 
+        <Stack.Screen
+          name="(sidebar)"
+          options={{
             headerShown: false,
-          }} 
+          }}
         />
-        
-   
+
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
+      <Toast /> 
     </ThemeProvider>
   );
 }

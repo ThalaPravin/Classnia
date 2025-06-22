@@ -1,24 +1,26 @@
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Drawer } from "expo-router/drawer";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet,Button  } from "react-native";
 import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
+import { auth, db } from "../../config/firebaseConfig";
+import { signOut } from "firebase/auth";
+import useUserInfo from "../../hooks/useUserInfo";
 
-// Define user types
-type UserType = "teacher" | "student" | null;
 
-// Define sidebar item structure
-interface SidebarItem {
-  name: string;
-  route: string;
-  icon: string;
-  iconFamily: "ionicons" | "material" | "fontawesome";
-}
+// type UserType = "tuition" | "student" | null;
 
-// Teacher sidebar items
-const teacherSidebarItems: SidebarItem[] = [
+// interface SidebarItem {
+//   name: string;
+//   route: string;
+//   icon: string;
+//   iconFamily: "ionicons" | "material" | "fontawesome";
+// }
+
+const teacherSidebarItems = [
   {
     name: "Dashboard",
     route: "teacher/dashboard",
@@ -63,8 +65,7 @@ const teacherSidebarItems: SidebarItem[] = [
   },
 ];
 
-// Student sidebar items
-const studentSidebarItems: SidebarItem[] = [
+const studentSidebarItems= [
   {
     name: "Dashboard",
     route: "student/dashboard",
@@ -97,65 +98,65 @@ const studentSidebarItems: SidebarItem[] = [
   },
 ];
 
-
-function CustomDrawerContent(props: any) {
+function CustomDrawerContent(props) {
   const router = useRouter();
   const pathname = usePathname();
-  const [userType, setUserType] = useState<UserType>("teacher"); 
-  const sidebarItems =
-    userType === "teacher" ? teacherSidebarItems : studentSidebarItems;
+  const { userInfo, loading, error, refetch } = useUserInfo();
 
-  // Get user display info
-  const getUserInfo = () => {
-    if (userType === "teacher") {
-      return {
-        name: "Sagar Sir",
-        role: "Tuition Teacher",
-        avatar: "👨‍🏫",
-      };
-    } else {
-      return {
-        name: "Pravin Avhad",
-        role: "Student",
-        avatar: "👩‍🎓",
-      };
-    }
-  };
+  console.log("CustomDrawerContent render:", { userInfo, loading, error });
 
-  const userInfo = getUserInfo();
+  const sidebarItems = userInfo?.role === "Tuition Teacher" ? teacherSidebarItems : studentSidebarItems;
 
-  const renderIcon = (item: SidebarItem, focused: boolean) => {
+  const renderIcon = (item, focused) => {
     const color = focused ? "#FFFFFF" : "#666666";
     const size = 24;
 
     switch (item.iconFamily) {
       case "ionicons":
-        return <Ionicons name={item.icon as any} size={size} color={color} />;
+        return <Ionicons name={item.icon } size={size} color={color} />;
       case "material":
-        return (
-          <MaterialIcons name={item.icon as any} size={size} color={color} />
-        );
+        return <MaterialIcons name={item.icon } size={size} color={color} />;
       case "fontawesome":
-        return (
-          <FontAwesome5 name={item.icon as any} size={size} color={color} />
-        );
+        return <FontAwesome5 name={item.icon } size={size} color={color} />;
       default:
         return <Ionicons name="circle-outline" size={size} color={color} />;
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      await AsyncStorage.removeItem("userData");
+      router.replace("/auth/signin");
+      console.log("Logout successful");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <View style={styles.drawerContainer}>
-      {/* User Profile Section */}
       <View style={styles.profileSection}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatar}>{userInfo.avatar}</Text>
-        </View>
-        <Text style={styles.userName}>{userInfo.name}</Text>
-        <Text style={styles.userRole}>{userInfo.role}</Text>
+        {loading ? (
+          <Text>Loading user info...</Text>
+        ) : error ? (
+          <View>
+            <Text style={styles.errorText}>Error: {error}</Text>
+            <Button title="Retry" onPress={refetch} />
+          </View>
+        ) : userInfo ? (
+          <>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatar}>{userInfo.avatar}</Text>
+            </View>
+            <Text style={styles.userName}>{userInfo.name}</Text>
+            <Text style={styles.userRole}>{userInfo.role}</Text>
+          </>
+        ) : (
+          <Text>No user data available</Text>
+        )}
       </View>
 
-      {/* Navigation Items */}
       <DrawerContentScrollView
         {...props}
         style={styles.drawerContent}
@@ -170,10 +171,10 @@ function CustomDrawerContent(props: any) {
                 <DrawerItem
                   label={item.name}
                   focused={isActive}
-                  onPress={() => router.push(item.route as any)}
+                  onPress={() => router.push(item.route )}
                   icon={({ focused }) => (
                     <View style={styles.iconContainer}>
-                      {renderIcon(item, focused)}
+                      {renderIcon(item, isActive)}
                     </View>
                   )}
                   labelStyle={[
@@ -193,15 +194,11 @@ function CustomDrawerContent(props: any) {
         </View>
       </DrawerContentScrollView>
 
-      {/* Logout Section */}
       <View style={styles.logoutSection}>
         <View style={styles.drawerItemWrapper}>
           <DrawerItem
             label="Logout"
-            onPress={() => {
-              // Handle logout logic here
-              console.log("Logout pressed");
-            }}
+            onPress={handleLogout}
             icon={() => (
               <View style={styles.iconContainer}>
                 <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
@@ -218,12 +215,13 @@ function CustomDrawerContent(props: any) {
   );
 }
 
-export default function Layout() {
-  // Replace this with actual user authentication logic
-  const [userType, setUserType] = useState<UserType>("teacher");
+// Keep you
 
-  // For testing purposes, you can toggle between user types
-  // In production, this would come from your authentication system
+export default function Layout() {
+  
+  const [userType, setUserType] = useState("tuition");
+
+
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -248,30 +246,22 @@ export default function Layout() {
           drawerInactiveBackgroundColor: "transparent",
         }}
       >
-        {/* Teacher Routes */}
         <Drawer.Screen
-          name="(sidebar)/teacher/dashboard"
+          name="teacher/dashboard"
           options={{
             drawerLabel: "Dashboard",
             title: "Teacher Dashboard",
           }}
         />
         <Drawer.Screen
-          name="(sidebar)/teacher/myclasses"
-          options={{
-            drawerLabel: "My Classes",
-            title: "My Classes",
-          }}
-        /><Drawer.Screen
-          name="(sidebar)/teacher/test"
+          name="teacher/myclasses"
           options={{
             drawerLabel: "My Classes",
             title: "My Classes",
           }}
         />
-
         <Drawer.Screen
-          name="teacher/create-class"
+          name="teacher/createclass"
           options={{
             drawerLabel: "Create Class",
             title: "Create New Class",
@@ -285,7 +275,7 @@ export default function Layout() {
           }}
         />
         <Drawer.Screen
-          name="teacher/approvals"
+          name="teacher/approval"
           options={{
             drawerLabel: "Approvals",
             title: "Pending Approvals",
@@ -299,14 +289,14 @@ export default function Layout() {
           }}
         />
         <Drawer.Screen
-          name="teacher/profile"
+          name="teacher/teacherprofile"
           options={{
             drawerLabel: "Profile",
             title: "Teacher Profile",
           }}
         />
 
-        {/* Student Routes */}
+        {/* Student Screens */}
         <Drawer.Screen
           name="student/dashboard"
           options={{
@@ -315,21 +305,21 @@ export default function Layout() {
           }}
         />
         <Drawer.Screen
-          name="student/classes"
+          name="student/studentclasses"
           options={{
             drawerLabel: "My Classes",
             title: "My Classes",
           }}
         />
         <Drawer.Screen
-          name="student/join-class"
+          name="student/joinclass"
           options={{
             drawerLabel: "Join Class",
             title: "Join New Class",
           }}
         />
         <Drawer.Screen
-          name="student/payments"
+          name="student/payment"
           options={{
             drawerLabel: "Payments",
             title: "Payment Tracker",
